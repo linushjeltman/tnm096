@@ -11,22 +11,27 @@ class Puzzle {
 public:
 	Puzzle();
 	void print();
-	bool loopcheck(std::deque<int> successor, std::deque<int> close);
+	void loopcheck(std::deque<int>& successor, std::deque<int>& close);
+	int calcF();
 	//std::deque<int> getSuccessors(std::deque<int> puzzle);
-
-	std::deque<int> puzzle[2][2]{}; // random puzzle
 	int random[3][3]{ {0, 8, 4},
-						{6, 5, 1},
-						{2, 3, 7} };
+					  {6, 5, 1},
+					  {2, 3, 7} };
 
-	std::deque<int> goal{ 1, 2, 3,
-							4, 5, 6,
-							7, 8, 0 }; // solution
+	int goal[3][3]{ {1, 2, 3},
+					{4, 5, 6},
+					{7, 8, 0} };
+};
+
+class Node {
+	// Puzzle 
 
 	//open: add, remove 
-
 	std::deque<int> open{};     // deque gives: Random access - constant O(1), this should also be sorted at all times.
 	std::deque<int> close{};    // Insertion or removal of elements at the end or beginning - constant O(1)
+	
+	int cost{ 0 }; // f(s) = c(s) + h(s)
+	int heuristic{ 0 };
 };
 
 Puzzle::Puzzle()
@@ -36,17 +41,53 @@ Puzzle::Puzzle()
 void Puzzle::print()
 {
 	// Print open list
+	std::cout << "Successors: ";
 	std::copy(open.begin(),
 		open.end(),
 		std::ostream_iterator<int>(std::cout, " "));
+	std::cout << std::endl;
 }
 
-bool Puzzle::loopcheck(std::deque<int> successor, std::deque<int> close)
+template <size_t rows, size_t cols>
+void printMatrix(int(&puzzle)[rows][cols])
 {
-	while (!successor.empty()) {
-
+	std::cout << "\n";
+	for (int i = 0; i < 3; i++) {
+		for (int j = 0; j < 3; j++) {
+			std::cout << puzzle[i][j] << " ";
+		}
+		std::cout << "\n";
 	}
-	return false;
+	std::cout << "----------" << "\n";
+}
+
+void Puzzle::loopcheck(std::deque<int>& successor, std::deque<int>& close)
+{
+	for (int const& i : successor) {
+		for (int const& j : close) {
+			if (successor.at(i) != close.at(j)) {
+				close.push_front(successor.at(i));
+				break;
+			}
+		}
+	}
+}
+
+int Puzzle::calcF()
+{
+	// c(s)
+	std::cout << "c(s) = " << cost << std::endl;
+	// h(s), h1 = misplaced tiles
+	for (int i = 0; i < 3; i++) {
+		for (int j = 0; j < 3; j++) {
+			if (random[i][j] != goal[i][j] && random[i][j] != 0) {
+				heuristic++;
+			}
+		}
+	}
+	std::cout << "h(s) = " << heuristic << std::endl;
+	std::cout << "f(s) = " << cost + heuristic << std::endl;
+	return cost + heuristic;
 }
 
 template <size_t rows, size_t cols>
@@ -59,7 +100,7 @@ std::deque<int> getSuccessors(int(&puzzle)[rows][cols])
 	for (int i{ 0 }; i < 3; i++) {
 		for (int j{ 0 }; j < 3; j++) {
 			if (puzzle[i][j] == 0) {
-				row =  i;
+				row = i;
 				col = j;
 			}
 		}
@@ -71,8 +112,8 @@ std::deque<int> getSuccessors(int(&puzzle)[rows][cols])
 	} directions[] = { {-1,0,},{0,-1},{0,1},{1,0} }; // left, bottom, right, 
 
 	for (int i = 0; i < sizeof(directions); i++) {
-		if( row+directions[i].dx >= 0 && row + directions[i].dx <= 3 && col + directions[i].dy >= 0 && col + directions[i].dy <= 3)
-			result.push_front(puzzle[row+directions[i].dx][col + directions[i].dy]);
+		if (row + directions[i].dx >= 0 && row + directions[i].dx <= 3 && col + directions[i].dy >= 0 && col + directions[i].dy <= 3)
+			result.push_front(puzzle[row + directions[i].dx][col + directions[i].dy]);
 	}
 	return result;
 }
@@ -82,14 +123,16 @@ int main()
 	std::cout << "Lab 1: 8-puzzle\n";
 	Puzzle p1;
 
-	int random[3][3]{ {0, 8, 4},
-					  {6, 5, 1},
-					  {2, 3, 7} };
+	while (true) {
+		p1.open = getSuccessors(p1.random);
+		p1.cost++;
+		p1.print();
+		p1.calcF();
+		printMatrix(p1.random);
 
-	p1.open = getSuccessors(random);
+		break;
+	}
 
-	p1.print();
-	
 
 	//getSuccessors(p1.puzzle);
 
@@ -98,3 +141,16 @@ int main()
 	// Calculate f(s)
 
 }
+
+
+/*
+1. Pussel
+2. Var är start-noden
+3. Successors
+4. Kolla så att de inte finns i closed
+5. Räkna ut f(s)
+6. Lägg till i open-list i storleksordning beroende på f
+7. Flytta start till closed
+8. Ta minsta f från open och expandera nod, steg 3
+
+*/
