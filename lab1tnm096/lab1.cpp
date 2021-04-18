@@ -41,7 +41,6 @@ private:
 	// stores the parent node of the chosen successor
 	State state;
 	sNode parent;
-	string moves;
 	int depth;
 	// f(s)=c(s)+h(s)
 	// number of misplaced tiles (hearistic)
@@ -51,6 +50,7 @@ private:
 	int f{};
 
 public:
+	string moves;
 
 	Node(const State& state, sNode Parent, int depth = 0)
 		: state(state)
@@ -104,6 +104,7 @@ int findZero(dint puzzle) {
 char Node::getDirection() {
 	Node temp = *this;
 	int childIndex{ findZero(temp.getState().getStateElem()) }, parentIndex{ findZero(temp.getParent()->get()->getState().getStateElem()) };
+	cout << "Child index: " << childIndex << " Parent index: " << parentIndex << endl << "Diff: " << childIndex-parentIndex << endl;
 
 	switch (childIndex - parentIndex) {
 	case(-3):
@@ -119,6 +120,7 @@ char Node::getDirection() {
 		return 'D';
 		break;
 	default:
+		
 		return 'k';
 		break;
 	}
@@ -300,6 +302,7 @@ int main()
 
 	Node* start{ new Node(initial, nullptr,0) };
 
+	unsigned pathTracer{ 0 };
 	string Path{};
 
 	priority_queue<Node*, std::vector<Node*>, Comparator> openList; // Open list
@@ -308,17 +311,29 @@ int main()
 	calculateCost(*start);
 	openList.push(start);
 
+	start->printPuzzle();
+	cout << endl;
+
 	while (!openList.empty())
 	{
 		Node* min{ openList.top() };
 		openList.pop();
-		
-	
-		char dir{};
+		/*if (!closedList.empty())
+			cout << "Last move: " << min->getDirection()<< endl;*/
+		//if (min->getDepth() >= 1) {
+		//	//cout << "Depth: " << min->getDepth() << " Dir: " << min->getDirection() << endl;
+
+		//	if (pathTracer < min->getDepth()) {
+		//		Path += min->getDirection();
+		//		pathTracer++;
+		//	}
+		//}
+
+		/*char dir{};
 		if (min->getDepth() >= 1) {
 			dir = min->getDirection();
 			Path += dir;
-		}
+		}*/
 
 		size_t id{ hashing(min->getState().getStateElem()) };
 		closedList[id] = min->getState().getStateElem();
@@ -328,9 +343,9 @@ int main()
 		if (min->getState().getStateElem() == goal.getStateElem()) {
 			int counter{};
 			cout << "Puzzle is solved! \n";
-			min->printPath(counter);
-			cout << "Direction: " << min->getDirection() << endl;
-			cout << "Solved in: " << min->getDepth() << " steps! :)\n";
+			//min->printPath(counter);
+			cout << "Direction: " << min->moves << endl;
+			cout << "Solved in: " << min->moves.length() << " steps! :)\n";
 			return 0;
 		};
 
@@ -354,9 +369,28 @@ int main()
 			child->incrementDepth();
 			calculateCost(*child); // calc heuristic score
 
+			child->printPuzzle();
+			cout << endl;
 			size_t childId{ hashing(child->getState().getStateElem()) };
+			if (closedList.find(childId) == closedList.end()) {	// insert to open list if it doesn't exist in closed list
 
-			if (closedList.find(childId) == closedList.end()) {	// insert to open list if it doesn't exist in closed list		
+				child->moves += min->moves;
+				child->moves += child->getDirection();
+				cout << "Depth: " << child->getDepth() << endl;
+				//cout << child->moves << endl;
+
+				
+				
+				/*cout << "f(s)= " << child->getF() << endl
+					<< "Child dir= " << child->getDirection() << endl
+					<< "Depth: " << child->getDepth() << endl
+					<< "Path: " << min->moves << endl << endl;*/
+				cout << "----------------" <<endl;
+
+				/*if (child->getDepth() == 4) {
+					cout <<"NU";
+				}*/
+
 				openList.push(child);
 				closedList[childId] = child->getState().getStateElem();
 			}
