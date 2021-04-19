@@ -1,10 +1,9 @@
 #include <cstddef>
-#include <stdio.h>
 #include <iostream>     // std::cout
 #include <algorithm>    // std::swap
+#include <utility>
 #include <vector>       // std::vector
 #include <queue>
-#include <cstdlib>
 #include <unordered_map>
 #include <string>
 using namespace std;
@@ -17,7 +16,7 @@ private:
 	dint _state;
 
 public:
-	State(const dint& arr) : _state(arr) {};
+    State(dint  arr) : _state(std::move(arr)) {};
 
 	dint& getStateElem() {
 		return _state;
@@ -41,6 +40,7 @@ private:
 	// stores the parent node of the chosen successor
 	State state;
 	sNode parent;
+	Node* parent1;
 	int depth;
 	// f(s)=c(s)+h(s)
 	// number of misplaced tiles (hearistic)
@@ -52,28 +52,37 @@ private:
 public:
 	string moves;
 
-	Node(const State& state, sNode Parent, int depth = 0)
-		: state(state)
+	Node(State  state, sNode Parent, int depth = 0)
+		: state(std::move(state))
 		, depth(depth)
 	{
-		parent = Parent;
+		parent = std::move(Parent);
+		parent1 = nullptr;
 		h = 0;
 		f = 0;
 	}
 
-	Node(const Node& newNode) : state(newNode.state), parent(newNode.parent), depth(newNode.depth), h(0), f(0) {}
+//    Node(State state1) : state(std::move(state1)) {
+//	    parent1 = nullptr;
+//	    depth = 0;
+//	    h = 0;
+//	    f = 0;
+//	}
+
+	Node(const Node& newNode) : state(newNode.state), parent(newNode.parent), parent1(nullptr), depth(newNode.depth), h(0), f(0) {}
 
 	State& getState() { return state; }
 
 	void incrementDepth() { depth++; }
-	const int& getDepth() { return depth; }
+	const int& getDepth() const { return depth; }
 
-	void setParent(sNode rhs) {
-		parent = rhs;
+	void setParent(Node *rhs) {
+		parent1 = rhs;
 	}
 	sNode* getParent() { return &parent; };
+	Node* getParent1() { return parent1; };
 
-	string getPath() { return moves; };
+	string getPath() const { return moves; };
 
 	void swapZero(int index, int zero) {
 		int temp = state.getStateElem().at(index);
@@ -83,10 +92,10 @@ public:
 
 	void incHeuristic() { setHeuristic(h + 1); }
 	void setHeuristic(int value) { h = value; }
-	int getHeuristic() { return h; }
+	int getHeuristic() const { return h; }
 
 	void setF() { f = depth + h; /*cout << depth << " " <<h << endl;*/ }
-	const int& getF() { return f; }
+	const int& getF() const { return f; }
 
 	void printPuzzle();
 	void printPath(int& counter);
@@ -103,28 +112,21 @@ int findZero(dint puzzle) {
 
 char Node::getDirection() {
 	Node temp = *this;
-	int childIndex{ findZero(temp.getState().getStateElem()) }, parentIndex{ findZero(temp.getParent()->get()->getState().getStateElem()) };
+	int childIndex{ findZero(temp.getState().getStateElem()) }, parentIndex{ findZero(temp.getParent1()->getState().getStateElem()) };
 	cout << "Child index: " << childIndex << " Parent index: " << parentIndex << endl << "Diff: " << childIndex-parentIndex << endl;
 
 	switch (childIndex - parentIndex) {
 	case(-3):
 		return 'U';
-		break;
 	case(-1):
 		return 'L';
-		break;
 	case(1):
 		return 'R';
-		break;
 	case(3):
 		return 'D';
-		break;
 	default:
-		
-		return 'k';
-		break;
+		return 'X';
 	}
-	return ' ';
 };
 
 dint findSucc(Node& state, int zeroIndex) {
@@ -272,12 +274,12 @@ void Node::printPuzzle() {
 void Node::printPath(int& counter)
 {
 	counter++;
-	if (this->parent == nullptr) {
+	if (this->parent1 == nullptr) {
 		this->printPuzzle();
 		std::cout << std::endl;
 		return;
 	}
-	this->parent->printPath(counter);
+	this->parent1->printPath(counter);
 	this->printPuzzle();
 	std::cout << std::endl;
 }
@@ -300,7 +302,8 @@ int main()
 	// Solvable Final puzzle
 	State goal(dint{ 1, 2, 3, 4, 5, 6, 7, 8, 0 });
 
-	Node* start{ new Node(initial, nullptr,0) };
+	Node* start{new Node(initial, 0, 0)};
+//	Node* start{new Node(initial)};
 
 	unsigned pathTracer{ 0 };
 	string Path{};
@@ -311,52 +314,31 @@ int main()
 	calculateCost(*start);
 	openList.push(start);
 
-	start->printPuzzle();
-	cout << endl;
-
 	while (!openList.empty())
 	{
-		Node* min{ openList.top() };
-		openList.pop();
-		/*if (!closedList.empty())
-			cout << "Last move: " << min->getDirection()<< endl;*/
-		//if (min->getDepth() >= 1) {
-		//	//cout << "Depth: " << min->getDepth() << " Dir: " << min->getDirection() << endl;
+		Node* min{ openList.top() }; // priority queue with comparator so .top() gives element with lowest f
+		openList.pop(); // remove min from open list
 
-		//	if (pathTracer < min->getDepth()) {
-		//		Path += min->getDirection();
-		//		pathTracer++;
-		//	}
-		//}
-
-		/*char dir{};
-		if (min->getDepth() >= 1) {
-			dir = min->getDirection();
-			Path += dir;
-		}*/
-
-		size_t id{ hashing(min->getState().getStateElem()) };
-		closedList[id] = min->getState().getStateElem();
-		//closedList.push_back(min->getState());
+		size_t id{ hashing(min->getState().getStateElem()) }; // give min an id by hashing it
+		closedList[id] = min->getState().getStateElem(); // put min in closed list
 
 		//Check if solved
 		if (min->getState().getStateElem() == goal.getStateElem()) {
 			int counter{};
 			cout << "Puzzle is solved! \n";
 			//min->printPath(counter);
-			cout << "Direction: " << min->moves << endl;
-			cout << "Solved in: " << min->moves.length() << " steps! :)\n";
+			cout << "Solved in: " << counter-1 << " steps! :)\n";
 			return 0;
 		};
 
 		// find start node
-		int zero = findZero(min->getState().getStateElem());
+		int zero = findZero(min->getState().getStateElem()); // find index for movable
 
 		// successors
-		dint succIndex = findSuccIndex(*min, zero);
+		dint succIndex = findSuccIndex(*min, zero); // get possible moves
 
 		// move zero and create new state
-		State tempState = min->getState().getStateElem();
+		State tempState = min->getState().getStateElem(); // save current state
 
 		shared_ptr<Node> minPointer{ min };
 
@@ -364,35 +346,16 @@ int main()
 		int counter{};
 
 		for (size_t states{ 0 }; states < succIndex.size(); states++) {
-			Node* child{ new Node(tempState, minPointer ,min->getDepth()) };
-			child->swapZero(succIndex.at(states), zero);
-			child->incrementDepth();
+			Node* child{new Node(min->getState(), nullptr, min->getDepth()+1)}; // Create child, copy of min.
+			child->swapZero(succIndex.at(states), zero);  // Move zero to possible move
+			child->incrementDepth(); // inrcrease the depth since this is a child node
 			calculateCost(*child); // calc heuristic score
 
-			child->printPuzzle();
-			cout << endl;
 			size_t childId{ hashing(child->getState().getStateElem()) };
 			if (closedList.find(childId) == closedList.end()) {	// insert to open list if it doesn't exist in closed list
-
-				child->moves += min->moves;
-				child->moves += child->getDirection();
-				cout << "Depth: " << child->getDepth() << endl;
-				//cout << child->moves << endl;
-
-				
-				
-				/*cout << "f(s)= " << child->getF() << endl
-					<< "Child dir= " << child->getDirection() << endl
-					<< "Depth: " << child->getDepth() << endl
-					<< "Path: " << min->moves << endl << endl;*/
-				cout << "----------------" <<endl;
-
-				/*if (child->getDepth() == 4) {
-					cout <<"NU";
-				}*/
-
-				openList.push(child);
-				closedList[childId] = child->getState().getStateElem();
+                child->setParent(min); // set min as parent
+				openList.push(child); // add child to open list
+				//closedList[childId] = child->getState().getStateElem(); // add child to closedList aswell.
 			}
 			counter++;
 		}
@@ -402,13 +365,13 @@ int main()
 
 /*
 1. Pussel
-2. Var är start-noden
+2. Var ï¿½r start-noden
 3. Successors
-4. Kolla så att de inte finns i closed
-5. Räkna ut f(s)
-6. Lägg till i open-list i storleksordning beroende på f
+4. Kolla sï¿½ att de inte finns i closed
+5. Rï¿½kna ut f(s)
+6. Lï¿½gg till i open-list i storleksordning beroende pï¿½ f
 7. Flytta start till closed
-8. Ta minsta f från open och expandera nod, steg 3
+8. Ta minsta f frï¿½n open och expandera nod, steg 3
 
 */
 

@@ -1,0 +1,26 @@
+#IncludeRegexLine: ^[ 	]*[#%][ 	]*(include|import)[ 	]*[<"]([^">]+)([">])
+
+#IncludeRegexScan: ^.*$
+
+#IncludeRegexComplain: ^$
+
+#IncludeRegexTransform: 
+
+/Users/linushjeltman/Documents/Skola/TNM096 - AI/tnm096/lab1tnm096/lab1.cpp
+cstddef
+-
+iostream
+-
+algorithm
+-
+utility
+-
+vector
+-
+queue
+-
+unordered_map
+-
+string
+-
+
